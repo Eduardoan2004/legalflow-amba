@@ -1,0 +1,116 @@
+datasource db { provider = "postgresql"; url = env("DATABASE_URL") }
+generator client { provider = "prisma-client-js" }
+
+enum Role { ADMIN ABOGADO PROCURADOR PASANTE CLIENTE }
+
+model User {
+  id            String   @id @default(cuid())
+  name          String?
+  email         String?  @unique
+  emailVerified DateTime?
+  image         String?
+  role          Role     @default(ABOGADO)
+  password      String?
+  accounts      Account[]
+  sessions      Session[]
+  expedientes   Expediente[] @relation("UsuarioExpediente")
+  expedientesCliente Expediente[] @relation("ClienteExpediente")
+  tareas        Tarea[]
+}
+
+model Account {
+  id String @id @default(cuid())
+  userId String
+  type String
+  provider String
+  providerAccountId String
+  refresh_token String? @db.Text
+  access_token String? @db.Text
+  expires_at Int?
+  token_type String?
+  scope String?
+  id_token String? @db.Text
+  session_state String?
+  user User @relation(fields: [userId], references: [id], onDelete: Cascade)
+  @@unique([provider, providerAccountId])
+}
+
+model Session {
+  id String @id @default(cuid())
+  sessionToken String @unique
+  userId String
+  expires DateTime
+  user User @relation(fields: [userId], references: [id], onDelete: Cascade)
+}
+
+model VerificationToken {
+  identifier String
+  token String @unique
+  expires DateTime
+  @@unique([identifier, token])
+}
+
+model Expediente {
+  id String @id @default(cuid())
+  numero String @unique
+  caratula String
+  fuero String
+  jurisdiccion String
+  juzgado String?
+  etapa String?
+  inicio DateTime @default(now())
+  proximoVencimiento DateTime?
+  tipoVencimiento String?
+  prioridad String
+  etiquetas String[]
+  responsableId String?
+  responsable User? @relation("UsuarioExpediente", fields: [responsableId], references: [id])
+  clienteId String?
+  cliente User? @relation("ClienteExpediente", fields: [clienteId], references: [id])
+  documentos Documento[]
+  tareas Tarea[]
+  audiencias Audiencia[]
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+}
+
+model Documento {
+  id String @id @default(cuid())
+  expedienteId String
+  expediente Expediente @relation(fields: [expedienteId], references: [id])
+  tipo String
+  key String
+  url String
+  filename String
+  mimeType String
+  size Int
+  uploadedAt DateTime @default(now())
+  summary String?
+  riskFlags String[]
+  suggestedActions String[]
+}
+
+model Tarea {
+  id String @id @default(cuid())
+  expedienteId String?
+  expediente Expediente? @relation(fields: [expedienteId], references: [id])
+  titulo String
+  descripcion String?
+  vence DateTime
+  estado String
+  responsableId String?
+  responsable User? @relation(fields: [responsableId], references: [id])
+  createdAt DateTime @default(now())
+}
+
+model Audiencia {
+  id String @id @default(cuid())
+  expedienteId String
+  expediente Expediente @relation(fields: [expedienteId], references: [id])
+  tipo String
+  fechaHora DateTime
+  lugar String?
+  linkVirtual String?
+  responsableId String?
+  notas String?
+}
